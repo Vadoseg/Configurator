@@ -117,7 +117,7 @@ int devmem(int argc, char **argv) {
     return 0;
 }
 
-int write_mem(unsigned long addr, char *data_type, char *write_data){
+int write_mem(unsigned long addr, char *data_type, char *write_data){   // Func to write in memory by using devmem2
     
     char address[10];
     char middle[10];
@@ -221,7 +221,7 @@ unsigned long count_increment(float frequency, int freq_units){     // Counting 
     return increment;
 } // MAX 12.5 MHz
 
-float count_phase(float phase){
+float count_phase(float phase){     // Counting phase in percents to dec
     float percent, phase_dec;
     
     percent = phase/270 * 100;  // Max 270° because we needed to fit all the data into a 32-bit register, but we were able to fit only 12 phase bits out of 16
@@ -231,10 +231,6 @@ float count_phase(float phase){
     return phase_dec;
     
 }
-
-int change_addr(int addr_cnt){
-
-} 
 
 int main(){
     unsigned long amplitude, increment;
@@ -255,27 +251,27 @@ int main(){
 
         printf("======CONFIG_OF_%d_FOUR_CHANNELS======\n\n", addr_cnt+1);
 
-        printf("Enter amplitude: ");
+        printf("Enter amplitude (Max 255): ");
         scanf("%lu", &amplitude);   // In ???
 
         if (amplitude > 255 || amplitude <= 0) {
-            printf(stderr, "Amplitude needs to be <= 255 and > 0\n");        
-            exit(3);
+            fprintf(stderr, "\nERROR: Amplitude needs to be <= 255 and > 0\n");        
+            exit(2);
         }   
 
         printf("Enter phase (Max 270°): ");
         scanf("%f", &phase);   // In degrees
 
         if (phase > 270 || phase <= 0) {
-            printf(stderr, "Phase needs to be <= 270 and > 0\n");        
+            fprintf(stderr, "\nERROR: Phase needs to be <= 270 and > 0\n");        
             exit(4);
         }
 
-        printf("Enter frequency and Units(Hz = 0, kHz = 1, MHz = 2): ");
+        printf("Enter frequency(Max 12.5 MHz) and  Units(Hz = 0, kHz = 1, MHz = 2): ");
         scanf("%f %d", &frequency, &freq_units);    // In Hz, kHz, MHz
 
         if (frequency > 12.5 && freq_units == 2 || frequency > 12500 && freq_units == 1 || frequency > 12500000 && freq_units == 0 || frequency <= 0){
-            printf(stderr, "Frequency need to be <= then 12.5 MHz (12500 kHz, 12 500 000) and > 0\n");        
+            fprintf(stderr, "\nERROR: Frequency need to be <= then 12.5 MHz (12500 kHz, 12 500 000) and > 0\n");        
             exit(5);
         }
 
@@ -297,11 +293,6 @@ int main(){
         array_connection(arr_fin, arr_incr, CONC_BIT_LEN, &i);
 
         bin_to_hex(arr_fin, &write_data);
-
-        // printf("Enter data type([b]yte, [h]alfword, [w]ord): "); Not in use because every time using word
-        // scanf("%s", &data_type);
-        
-        printf("Шестнадцатеричная строка: %s\n", write_data);
 
         write_mem(START_ADDR+addr_cnt*16, data_type, write_data);
 
