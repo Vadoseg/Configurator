@@ -18,8 +18,13 @@
   __LINE__, __FILE__, errno, strerror(errno)); exit(1); } while(0)
 
 // Make header for defines
-#define POW_CONF_ADDR 0x83c03044    // Address for pow configuration
-#define ON_OFF_ADDR   0x83c03040    // Address for on/off and work.period
+#define POW_CONF_ADDR "0x83c03044"    // Address for pow configuration
+#define ON_OFF_ADDR   "0x83c03040 "   // Address for on/off and work.period
+
+#define POW_CONF_DATA "0x00000004"  // Data to conf pow step
+#define ON_OFF_DATA   "0x00100400"  // Data to on/off and work.period
+
+#define MAP_ADDR      0x83c02000    // First address for reading
 
 #define START_ADDR    0x83c03000    // First address for writing
 
@@ -36,7 +41,7 @@
 #define MAP_MASK (MAP_SIZE - 1)
 
 
-int devmem(int argc, char **argv) {
+int devmem(int argc, char **argv) {     // devmem2 to write in mem
     int fd;
     void *map_base, *virt_addr; 
 	unsigned long read_result, writeval;
@@ -232,6 +237,43 @@ float count_phase(float phase){     // Counting phase in percents to dec
     
 }
 
+int start_conf(){   // Starting Function
+
+    char *pow_args[] = {"devmem", POW_CONF_ADDR, "w", POW_CONF_DATA};
+    char *on_off_args[] = {"devmem", ON_OFF_ADDR, "w", ON_OFF_DATA}; 
+    
+    int argc = sizeof(pow_args) / sizeof(pow_args[0]);
+    
+    devmem(argc, pow_args);
+
+    devmem(argc, on_off_args);
+}
+
+void reading(){     // Function for reading from map addresses
+    
+    int read_num = 1;
+    
+    char read_address[10];
+    char middle[10];
+
+    printf("Enter address to read from 1 to 12: \n");
+    scanf("%d", &read_num);
+    
+    if (read_num > 12 || read_num <= -1){
+        printf("\n\nERROR: Choose address from 1 to 12 (read address set to 1)\n\n");
+        read_num = 1;
+    }
+
+    snprintf(middle, sizeof(middle), "%lx", MAP_ADDR+8*(read_num-1));
+
+    strcpy(read_address, "0x");
+    strcat(read_address, middle);
+
+    char *read_args[] = {"devmem", read_address};
+    devmem(2, read_args);
+    
+}
+
 int main(){
     unsigned long amplitude, increment;
     float frequency, phase;
@@ -299,30 +341,12 @@ int main(){
         addr_cnt += 1;
     }
     
+    printf("\n======STARTING======\n\n");
+    start_conf();
+
+    while(1){
+        reading();
+    }
+
     return 0;
 }
-
-/* ===SIXTEEN CHANNELS CONFIGURATION===
-./devmem2 0x83c03000 word 0x8c000001
-./devmem2 0x83c03004 word 0x8c000001
-./devmem2 0x83c03008 word 0x8c000001
-./devmem2 0x83c0300c word 0x8c000001
-./devmem2 0x83c03010 word 0x8c000052
-./devmem2 0x83c03014 word 0x8c000052
-./devmem2 0x83c03018 word 0x8c000052
-./devmem2 0x83c0301c word 0x8c000052
-./devmem2 0x83c03020 word 0x8c000001
-./devmem2 0x83c03024 word 0x8c000001
-./devmem2 0x83c03028 word 0x8c000001
-./devmem2 0x83c0302c word 0x8c000001
-./devmem2 0x83c03030 word 0x8c000052
-./devmem2 0x83c03034 word 0x8c0000a4
-./devmem2 0x83c03038 word 0x8c0000f6
-./devmem2 0x83c0303c word 0x8c000148 */
-
-// amp= 31, phase:25, incr:100
-//00011111000000011001000001100100
-//1F019064
-
-
-// Frequency !> 200 MHz
