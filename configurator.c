@@ -13,6 +13,7 @@
 #include <termios.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#include <math.h>
 
 #include "configurator.h"
 
@@ -118,7 +119,7 @@ int write_mem(unsigned long addr, char *data_type, char *write_data){   // Func 
     return 0;
 }
 
-unsigned long dec_to_bin(int dec_num,unsigned long **bin_num[],int arr_length){    // Translate decimal to binary
+unsigned long dec_to_bin(int dec_num, unsigned long **bin_num[], int arr_length){    // Translate decimal to binary
     unsigned long *bin_arr;
     unsigned long *bin_reversed = (unsigned long *)malloc(arr_length * sizeof(unsigned long));
     int i, j = 0;
@@ -201,16 +202,20 @@ unsigned long count_increment(float frequency, int freq_units){     // Counting 
     return increment;
 } // MAX 12.5 MHz
 
-float count_phase(float phase){     // Counting phase in percents to dec
-    float percent, phase_dec;
-    
-    percent = phase/270 * 100;  // Max 270° because we needed to fit all the data into a 32-bit register, but we were able to fit only 12 phase bits out of 16
-    
-    phase_dec = 4096 * percent/100; // 4096 because It's our maximum in 2^12
+int count_phase(int phase){         // Counting phase in percents to dec
+    int phase_dec;
+
+    phase_dec = (phase << 12) >> 8;  // Our max is 4096, that equal to 100%(270°)
 
     return phase_dec;
-    
 }
+
+int count_amplitude(int amplitude){     // Counting amplitude in percents 
+
+    amplitude = (amplitude << 8) >> 7;  // Our max is 255 equal to 100%
+
+    return amplitude;
+}  
 
 int start_conf(){   // Starting Function
 
@@ -239,7 +244,7 @@ void reading(){     // Function for reading from map addresses
         read_num = 1;
     }
 
-    snprintf(middle, sizeof(middle), "%lx", MAP_ADDR+8*(read_num-1));
+    snprintf(middle, sizeof(middle), "%lx", REG_MAP_ADDR+8*(read_num-1));
 
     strcpy(read_address, "0x");
     strcat(read_address, middle);
@@ -250,8 +255,10 @@ void reading(){     // Function for reading from map addresses
 }
 
 int main(){
-    unsigned long amplitude, increment;
-    float frequency, phase;
+
+    unsigned long increment;
+    int amplitude, phase;
+    float frequency;
     int freq_units = 0, i = 0;
     char *data_type = "w";
     char *write_data[10];
@@ -268,16 +275,16 @@ int main(){
 
         printf("======CONFIG_OF_%d_FOUR_CHANNELS======\n\n", addr_cnt+1);
 
-        printf("Enter amplitude (Max 255): ");
-        scanf("%lu", &amplitude);   // In ???
+        printf("Enter amplitude (Max 100): ");
+        scanf("%d", &amplitude);   // In ???
 
-        if (amplitude > 255 || amplitude <= 0) {
-            fprintf(stderr, "\nERROR: Amplitude needs to be <= 255 and > 0\n");        
+        if (amplitude > 100 || amplitude <= 0) {
+            fprintf(stderr, "\nERROR: Amplitude needs to be <= 100 and > 0\n");        
             exit(2);
         }   
 
         printf("Enter phase (Max 270°): ");
-        scanf("%f", &phase);   // In degrees
+        scanf("%d", &phase);   // In degrees
 
         if (phase > 270 || phase <= 0) {
             fprintf(stderr, "\nERROR: Phase needs to be <= 270 and > 0\n");        
@@ -295,6 +302,8 @@ int main(){
         increment = count_increment(frequency, freq_units);
 
         phase = count_phase(phase);
+
+        amplitude = count_amplitude(amplitude);
 
         dec_to_bin(amplitude, &arr_amp, AMP_BIT_LEN);
 
