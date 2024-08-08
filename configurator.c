@@ -92,7 +92,7 @@ int devmem(int argc, char **argv) {     // devmem2 to write in mem
 		printf("Written 0x%X; readback 0x%X\n", writeval, read_result); 
 		fflush(stdout);
 	}
-	
+
 	if(munmap(map_base, MAP_SIZE) == -1) FATAL;
     close(fd);
     return 0;
@@ -205,14 +205,20 @@ unsigned long count_increment(float frequency, int freq_units){     // Counting 
 int count_phase(int phase){         // Counting phase in percents to dec
     int phase_dec;
 
-    phase_dec = (phase << 12) >> 8;  // Our max is 4096, that equal to 100%(270°)
+    phase_dec = (phase << 12) / 270;  // Our max is 4096, that equal to 100%(270°)
+    if (phase_dec == 4096) {
+        phase_dec -= 1;
+    }
 
     return phase_dec;
 }
 
 int count_amplitude(int amplitude){     // Counting amplitude in percents 
 
-    amplitude = (amplitude << 8) >> 7;  // Our max is 255 equal to 100%
+    amplitude = (amplitude << 8) / 100;  // Our max is 255 equal to 100%
+    if (amplitude == 256) {
+        amplitude -= 1;
+    }
 
     return amplitude;
 }  
@@ -278,16 +284,16 @@ int main(){
         printf("Enter amplitude (Max 100): ");
         scanf("%d", &amplitude);   // In ???
 
-        if (amplitude > 100 || amplitude <= 0) {
-            fprintf(stderr, "\nERROR: Amplitude needs to be <= 100 and > 0\n");        
+        if (amplitude > 100 || amplitude <= -1) {
+            fprintf(stderr, "\nERROR: Amplitude needs to be <= 100 and >= 0\n");        
             exit(2);
         }   
 
         printf("Enter phase (Max 270°): ");
         scanf("%d", &phase);   // In degrees
 
-        if (phase > 270 || phase <= 0) {
-            fprintf(stderr, "\nERROR: Phase needs to be <= 270 and > 0\n");        
+        if (phase > 270 || phase <= -1) {
+            fprintf(stderr, "\nERROR: Phase needs to be <= 270 and >= 0\n");        
             exit(4);
         }
 
@@ -322,6 +328,8 @@ int main(){
 
         write_mem(START_ADDR+addr_cnt*16, data_type, write_data);
 
+        i = 0;
+
         addr_cnt += 1;
     }
     
@@ -331,6 +339,8 @@ int main(){
     while(1){
         reading();
     }
+
+    free(arr_fin);
 
     return 0;
 }

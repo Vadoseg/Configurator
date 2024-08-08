@@ -35,3 +35,5 @@
 
 *.json
 !Makefile
+devmem2.c
+conf_test.c
